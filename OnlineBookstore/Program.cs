@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using OnlineBookstore;
 using OnlineBookstore.Database.Context;
@@ -11,6 +12,7 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddDbContext<OnlineBookstoreContext>(options =>options.UseSqlServer(builder.Configuration.GetConnectionString("OnlineBookstoreDB")));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IAuthorRepository, AuthorRepository>();
@@ -24,7 +26,7 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     options.Password.RequireLowercase = true;
     options.User.RequireUniqueEmail=true;
 }).AddEntityFrameworkStores<OnlineBookstoreContext>().AddDefaultTokenProviders();
-builder.Services.Configure<JWTSettings>(builder.Configuration.GetSection("JWTSettings"));
+builder.Services.Configure<JWTSettings>(builder.Configuration.GetSection("JwtSettings"));
 var jwtSettings = builder.Configuration.GetSection(nameof(JWTSettings)).Get<JWTSettings>();
 builder.Services.AddAuthentication(option =>
 {
@@ -40,13 +42,12 @@ builder.Services.AddAuthentication(option =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings.Issuer,
         ValidAudience = jwtSettings.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSettings.Secret)),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSettings.SecretKey)),
     };
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
